@@ -2,6 +2,7 @@
 """
 RX Ultimate Video Downloader Bot - Fixed Professional Edition
 Supports ALL major platforms with reliable downloads
+Optimized for Android/Termux deployment
 """
 
 import os
@@ -12,6 +13,7 @@ import base64
 import re
 import tempfile
 import math
+import subprocess
 from typing import Dict, List, Optional, Any
 from datetime import datetime
 
@@ -24,8 +26,15 @@ try:
     from aiogram.utils.chat_action import ChatActionMiddleware
     from aiogram.exceptions import TelegramBadRequest, TelegramNetworkError
     import aiofiles
+    import aiohttp
 except ImportError as e:
     logging.error(f"Required packages not installed: {e}")
+    # Try to auto-install missing packages
+    try:
+        subprocess.check_call(["pip", "install", "yt-dlp", "aiogram", "aiofiles", "aiohttp"])
+        logging.info("Missing packages installed successfully")
+    except:
+        logging.error("Failed to auto-install packages. Please install manually: pip install yt-dlp aiogram aiofiles aiohttp")
     raise
 
 # Configure logging
@@ -58,11 +67,12 @@ dp.message.middleware(ChatActionMiddleware())
 
 # Platform Icons
 PLATFORM_ICONS = {
-    "youtube": "🎬", "facebook": "👥", "instagram": "📸", "tiktok": "🎵",
-    "twitter": "🐦", "snapchat": "👻", "linkedin": "💼", "pinterest": "📌",
-    "reddit": "🔴", "vimeo": "📹", "dailymotion": "📺", "twitch": "🎮",
-    "soundcloud": "🎧", "terabox": "📦", "likee": "💃", "kwai": "🌟",
-    "bilibili": "📱", "telegram": "✈️", "discord": "🎮", "default": "🔗"
+    "youtube": "", "facebook": "", "instagram": "", "tiktok": "",
+    "twitter": "", "snapchat": "", "linkedin": "", "pinterest": "",
+    "reddit": "", "vimeo": "", "dailymotion": "", "twitch": "",
+    "soundcloud": "", "terabox": "", "likee": "", "kwai": "",
+    "bilibili": "", "telegram": "", "discord": "", "default": "",
+    "pinterest": "", "rutube": "", "ok": "", "whatsapp": ""
 }
 
 # Supported platforms
@@ -72,7 +82,8 @@ SUPPORTED_PLATFORMS = {
     "instagram.com", "www.instagram.com", "tiktok.com", "vm.tiktok.com",
     "twitter.com", "x.com", "reddit.com", "v.redd.it", "vimeo.com",
     "dailymotion.com", "twitch.tv", "soundcloud.com", "terabox.com",
-    "likee.com", "kwai.com", "bilibili.com", "t.me", "discord.com"
+    "likee.com", "kwai.com", "bilibili.com", "t.me", "discord.com",
+    "pin.it", "pinterest.com", "rutube.ru", "ok.ru", "whatsapp.com"
 }
 
 # Global storage
@@ -163,6 +174,14 @@ def detect_platform(url: str) -> str:
         return "kwai"
     elif "bilibili.com" in url_lower:
         return "bilibili"
+    elif "pinterest.com" in url_lower or "pin.it" in url_lower:
+        return "pinterest"
+    elif "rutube.ru" in url_lower:
+        return "rutube"
+    elif "ok.ru" in url_lower:
+        return "ok"
+    elif "whatsapp.com" in url_lower:
+        return "whatsapp"
     
     return "default"
 
@@ -184,7 +203,7 @@ def is_valid_url(url: str) -> bool:
 def create_channel_keyboard() -> InlineKeyboardMarkup:
     """Create channel keyboard"""
     builder = InlineKeyboardBuilder()
-    builder.row(InlineKeyboardButton(text="📢 RX Free Zone চ্যানেল জয়েন করুন", url=CHANNEL_URL))
+    builder.row(InlineKeyboardButton(text=" RX Free Zone   ", url=CHANNEL_URL))
     return builder.as_markup()
 
 def create_quality_keyboard(url_id: str, platform: str) -> InlineKeyboardMarkup:
@@ -193,58 +212,60 @@ def create_quality_keyboard(url_id: str, platform: str) -> InlineKeyboardMarkup:
     
     # High Quality
     builder.row(InlineKeyboardButton(
-        text="💎 High Quality (1080p)",
+        text=" High Quality (1080p)",
         callback_data=f"dl:high:{url_id}"
     ))
     
     # Standard Quality
     builder.row(InlineKeyboardButton(
-        text="⭐ Standard Quality (720p)",
+        text=" Standard Quality (720p)",
         callback_data=f"dl:standard:{url_id}"
     ))
     
     # Audio Only
     builder.row(InlineKeyboardButton(
-        text="🎵 Audio Only (MP3)",
+        text=" Audio Only (MP3)",
         callback_data=f"dl:audio:{url_id}"
     ))
     
     # Channel button
-    builder.row(InlineKeyboardButton(text="📢 RX Free Zone", url=CHANNEL_URL))
+    builder.row(InlineKeyboardButton(text=" RX Free Zone", url=CHANNEL_URL))
     
     return builder.as_markup()
 
 # Welcome message
 def get_welcome_message() -> str:
-    return f"""🚀 RX ULTIMATE DOWNLOADER BOT 🚀
+    return f""" RX ULTIMATE DOWNLOADER BOT 
 
-আমি একটি প্রফেশনাল ভিডিও ডাউনলোডার বট যা সব ধরনের সোশ্যাল মিডিয়া ভিডিও ডাউনলোড করতে পারি!
+              !
 
-🎬 সাপোর্টেড প্ল্যাটফর্ম:
-• YouTube (সব ধরনের ভিডিও, Shorts)
-• Facebook (ভিডিও, রিলস, Watch)
-• Instagram (পোস্ট, রিলস, স্টোরি)
-• TikTok (সব ফরম্যাট)
-• Twitter/X (ভিডিও, GIF)
-• Reddit (ভিডিও, v.redd.it)
-• Vimeo (HD কোয়ালিটি)
-• Dailymotion
-• Twitch (ক্লিপস, VOD)
-• SoundCloud (MP3)
-• Terabox (বড় ফাইল)
-• Likee, Kwai, Bilibili
-• এবং আরো অনেক!
+  :
+ YouTube (  , Shorts)
+ Facebook (, , Watch)
+ Instagram (, , )
+ TikTok ( )
+ Twitter/X (, GIF)
+ Reddit (, v.redd.it)
+ Vimeo (HD )
+ Dailymotion
+ Twitch (, VOD)
+ SoundCloud (MP3)
+ Terabox ( )
+ Likee, Kwai, Bilibili
+ Pinterest, Rutube, OK.ru
+ WhatsApp status
+   !
 
-💎 বৈশিষ্ট্য:
-• 🚀 High Speed Downloads
-• 💎 1080p পর্যন্ত ভিডিও
-• 🎵 320kbps MP3 অডিও
-• 📱 Smart File Splitting
-• ⚡ Fast Processing
+ :
+  High Speed Downloads
+  1080p  
+  320kbps MP3 
+  Smart File Splitting
+  Fast Processing
 
-🔹 ব্যবহার: যেকোনো ভিডিও লিংক পাঠান!
+ :    !
 
-🔔 আরো ফ্রি টুলস: {CHANNEL_USERNAME}"""
+   : {CHANNEL_USERNAME}"""
 
 # Bot Commands
 @dp.message(Command("start"))
@@ -261,29 +282,29 @@ async def start_command(message: types.Message) -> None:
 @dp.message(Command("help"))
 async def help_command(message: types.Message) -> None:
     """Help command"""
-    help_text = f"""🤖 RX ULTIMATE DOWNLOADER সাহায্য
+    help_text = f""" RX ULTIMATE DOWNLOADER 
 
-🔹 ব্যবহারের পদ্ধতি:
-1. যেকোনো সাপোর্টেড প্ল্যাটফর্মের লিংক পাঠান
-2. কোয়ালিটি সিলেক্ট করুন
-3. ডাউনলোড করুন!
+  :
+1.     
+2.   
+3.  !
 
-💎 ফিচার:
-• 1080p পর্যন্ত ভিডিও
-• 320kbps MP3 অডিও
-• 50MB+ ফাইল অটো স্প্লিট
-• সুপার ফাস্ট ডাউনলোড
+ :
+ 1080p  
+ 320kbps MP3 
+ 50MB+   
+   
 
-❓ সমস্যা হলে:
-• URL সঠিক এবং পাবলিক কিনা চেক করুন
-• অন্য কোয়ালিটি চেষ্টা করুন
-• কিছুক্ষণ পর আবার চেষ্টা করুন
+  :
+ URL      
+    
+     
 
-📊 কমান্ড:
-• /start - বট শুরু করুন
-• /help - সাহায্য দেখুন
+ :
+ /start -   
+ /help -  
 
-🔔 আপডেট: {CHANNEL_USERNAME}"""
+ : {CHANNEL_USERNAME}"""
 
     await message.answer(
         text=help_text,
@@ -301,21 +322,21 @@ async def process_url(message: types.Message) -> None:
         # Validate URL
         if not is_valid_url(url):
             await message.answer(
-                "❌ Invalid URL!\n\n"
-                "অনুগ্রহ করে সাপোর্টেড প্ল্যাটফর্মের একটি ভ্যালিড লিংক পাঠান।\n"
-                "সাপোর্টেড সাইট দেখতে /help কমান্ড ব্যবহার করুন।"
+                " Invalid URL!\n\n"
+                "       \n"
+                "   /help   "
             )
             return
 
         # Detect platform
         platform = detect_platform(url)
-        platform_icon = PLATFORM_ICONS.get(platform, "🔗")
+        platform_icon = PLATFORM_ICONS.get(platform, "")
         
         # Store URL
         url_id = store_url(url)
         
         # Analysis message
-        analysis_msg = await message.answer("🔍 URL বিশ্লেষণ করা হচ্ছে...")
+        analysis_msg = await message.answer(" URL   ...")
         
         try:
             # Get basic info
@@ -324,6 +345,7 @@ async def process_url(message: types.Message) -> None:
                 'no_warnings': True,
                 'extract_flat': False,
                 'socket_timeout': 30,
+                'noplaylist': True,
             }
             
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -345,14 +367,14 @@ async def process_url(message: types.Message) -> None:
                 else:
                     duration_str = "Unknown"
                 
-                success_text = f"""✅ ভিডিও বিশ্লেষণ সম্পন্ন!
+                success_text = f"""   !
 
 {platform_icon} Platform: {platform.title()}
-📁 Title: {title}
-👤 Uploader: {uploader}
-⏱️ Duration: {duration_str}
+ Title: {title}
+ Uploader: {uploader}
+ Duration: {duration_str}
 
-💎 নিচের কোয়ালিটি থেকে পছন্দ করুন:"""
+     :"""
 
                 await analysis_msg.edit_text(
                     text=success_text,
@@ -360,12 +382,12 @@ async def process_url(message: types.Message) -> None:
                 )
             else:
                 # Fallback
-                fallback_text = f"""🔍 URL গ্রহণযোগ্য!
+                fallback_text = f""" URL !
 
 {platform_icon} Platform: {platform.title()}
-📱 Status: Ready for processing
+ Status: Ready for processing
 
-💎 নিচের কোয়ালিটি থেকে পছন্দ করুন:"""
+     :"""
 
                 await analysis_msg.edit_text(
                     text=fallback_text,
@@ -375,12 +397,12 @@ async def process_url(message: types.Message) -> None:
         except Exception as e:
             logger.error(f"Error extracting video info: {e}")
             # Always show download options
-            fallback_text = f"""🔍 URL গ্রহণযোগ্য!
+            fallback_text = f""" URL !
 
 {platform_icon} Platform: {platform.title()}
-📱 Status: Ready for download
+ Status: Ready for download
 
-💎 নিচের কোয়ালিটি থেকে পছন্দ করুন:"""
+     :"""
 
             await analysis_msg.edit_text(
                 text=fallback_text,
@@ -389,7 +411,7 @@ async def process_url(message: types.Message) -> None:
             
     except Exception as e:
         logger.error(f"Error processing URL: {e}")
-        await message.answer("❌ URL প্রসেসিং এ ত্রুটি! পরে চেষ্টা করুন।")
+        await message.answer(" URL   !   ")
 
 # Download handlers
 @dp.callback_query(F.data.startswith("dl:"))
@@ -404,27 +426,27 @@ async def handle_download(callback: types.CallbackQuery) -> None:
         
         url = get_url(url_id)
         if not url:
-            await callback.message.answer("❌ URL মেয়াদ শেষ! নতুন লিংক পাঠান।")
+            await callback.message.answer(" URL  !   ")
             return
         
         platform = detect_platform(url)
-        platform_icon = PLATFORM_ICONS.get(platform, "🔗")
+        platform_icon = PLATFORM_ICONS.get(platform, "")
         
         # Start download
         download_msg = await callback.message.answer(
-            f"📥 ডাউনলোড শুরু হয়েছে...\n\n"
+            f"   ...\n\n"
             f"{platform_icon} Platform: {platform.title()}\n"
-            f"💎 Quality: {quality.title()}\n"
-            f"⚡ Status: Processing..."
+            f" Quality: {quality.title()}\n"
+            f" Status: Processing..."
         )
         
         # Configure download options
         if quality == "high":
-            format_selector = "best[height<=1080]"
+            format_selector = "bestvideo[height<=1080]+bestaudio/best[height<=1080]"
         elif quality == "standard":
-            format_selector = "best[height<=720]"
+            format_selector = "bestvideo[height<=720]+bestaudio/best[height<=720]"
         elif quality == "audio":
-            format_selector = "bestaudio/best"
+            format_selector = "bestaudio"
         else:
             format_selector = "best"
         
@@ -434,6 +456,8 @@ async def handle_download(callback: types.CallbackQuery) -> None:
             'no_warnings': True,
             'socket_timeout': 120,
             'retries': 5,
+            'noplaylist': True,
+            'noprogress': True,
         }
         
         # Platform optimizations
@@ -453,10 +477,13 @@ async def handle_download(callback: types.CallbackQuery) -> None:
                 'preferredcodec': 'mp3',
                 'preferredquality': '320',
             }]
+            ydl_opts['outtmpl'] = '%(title)s.%(ext)s'
+        else:
+            ydl_opts['merge_output_format'] = 'mp4'
+            ydl_opts['outtmpl'] = '%(title)s.%(ext)s'
         
         with tempfile.TemporaryDirectory() as temp_dir:
-            output_path = os.path.join(temp_dir, "%(title)s.%(ext)s")
-            ydl_opts['outtmpl'] = output_path
+            ydl_opts['outtmpl'] = os.path.join(temp_dir, '%(title)s.%(ext)s')
             
             try:
                 # Try download with fallback
@@ -479,34 +506,34 @@ async def handle_download(callback: types.CallbackQuery) -> None:
                 
                 if not success:
                     await download_msg.edit_text(
-                        "❌ ডাউনলোড ব্যর্থ!\n\n"
-                        "🔧 সমাধান:\n"
-                        "• URL সঠিক এবং পাবলিক কিনা চেক করুন\n"
-                        "• অন্য কোয়ালিটি চেষ্টা করুন\n"
-                        "• কিছুক্ষণ পর আবার চেষ্টা করুন"
+                        "  !\n\n"
+                        " :\n"
+                        " URL      \n"
+                        "    \n"
+                        "     "
                     )
                     return
                 
                 # Find downloaded file
                 downloaded_files = [f for f in os.listdir(temp_dir) if not f.startswith('.')]
                 if not downloaded_files:
-                    await download_msg.edit_text("❌ ফাইল খুঁজে পাওয়া যায়নি!")
+                    await download_msg.edit_text("    !")
                     return
                 
                 file_path = os.path.join(temp_dir, downloaded_files[0])
                 file_size = os.path.getsize(file_path)
                 filename = sanitize_filename(downloaded_files[0])
                 
-                await download_msg.edit_text("📤 ফাইল আপলোড হচ্ছে...")
+                await download_msg.edit_text("   ...")
                 
                 # Create caption
-                caption = f"""✅ ডাউনলোড সম্পন্ন!
+                caption = f"""  !
 
 {platform_icon} Platform: {platform.title()}
-📊 Size: {format_file_size(file_size)}
-💎 Quality: {quality.title()}
+ Size: {format_file_size(file_size)}
+ Quality: {quality.title()}
 
-📢 আরো ফ্রি টুলস: {CHANNEL_USERNAME}"""
+   : {CHANNEL_USERNAME}"""
                 
                 # Send file
                 if file_size <= MAX_FILE_SIZE:
@@ -521,18 +548,18 @@ async def handle_download(callback: types.CallbackQuery) -> None:
                             reply_markup=create_channel_keyboard()
                         )
                     else:
-                        await callback.message.answer_document(
-                            document=BufferedInputFile(file_data, filename=filename),
+                        await callback.message.answer_video(
+                            video=BufferedInputFile(file_data, filename=filename),
                             caption=caption,
                             reply_markup=create_channel_keyboard()
                         )
                 else:
                     # Large file - split and send
                     await callback.message.answer(
-                        f"⚠️ বড় ফাইল সতর্কতা\n\n"
+                        f"   \n\n"
                         f"Size: {format_file_size(file_size)}\n"
                         f"Telegram limit: 50MB\n\n"
-                        f"ফাইলটি ছোট অংশে ভাগ করে পাঠানো হবে।"
+                        f"      "
                     )
                     
                     # Split and send
@@ -546,7 +573,7 @@ async def handle_download(callback: types.CallbackQuery) -> None:
                             chunk_filename = f"{filename}.part{chunk_num:03d}"
                             await callback.message.answer_document(
                                 document=BufferedInputFile(chunk_data, filename=chunk_filename),
-                                caption=f"📦 Part {chunk_num + 1} - {chunk_filename}"
+                                caption=f" Part {chunk_num + 1} - {chunk_filename}"
                             )
                             chunk_num += 1
                             await asyncio.sleep(1)
@@ -556,11 +583,11 @@ async def handle_download(callback: types.CallbackQuery) -> None:
                 
             except Exception as e:
                 logger.error(f"Download error: {e}")
-                await download_msg.edit_text("❌ ডাউনলোডে ত্রুটি! অন্য কোয়ালিটি চেষ্টা করুন।")
+                await download_msg.edit_text("  !    ")
                 
     except Exception as e:
         logger.error(f"Error in handle_download: {e}")
-        await callback.message.answer("❌ ডাউনলোড হ্যান্ডলিং এ ত্রুটি!")
+        await callback.message.answer("    !")
 
 # Error handler
 @dp.errors()
