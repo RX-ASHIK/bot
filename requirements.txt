@@ -1,9 +1,0 @@
-aiogram==3.*
-aiofiles
-yt-dlp
-requests
-python-dotenv
-certifi
-pydantic
-typing-extensions
-aiohttp
